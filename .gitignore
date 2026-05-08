@@ -1,0 +1,13 @@
+# local data volumes / runtime state
+data/
+volumes/
+*.log
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# secrets (no secrets currently in claude-otel.env, but guard against future *.local.env)
+*.local.env
+*.secret.env

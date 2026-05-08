@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# OTLP ingestion is enabled via CLI flag (--web.enable-otlp-receiver).
+# This file just keeps a self-scrape so we can monitor the monitor.
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+# OTLP-translated metrics: dots become underscores, the _total suffix
+# is appended for monotonic counters. Verify actual names with:
+#   curl -s 'http://localhost:9090/api/v1/label/__name__/values' | jq '.data[]' | grep claude

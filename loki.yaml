@@ -1,0 +1,76 @@
+# Single-binary, filesystem-backed Loki for personal use. Don't run this in
+# production — there's no replication, no retention enforcement, no auth.
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: warn
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 168h    # 7d — fine for personal use
+  ingestion_rate_mb: 16
+  ingestion_burst_size_mb: 32
+  max_label_name_length: 1024
+  max_label_value_length: 4096
+  max_label_names_per_series: 30
+  reject_old_samples: true
+  reject_old_samples_max_age: 24h
+
+  # Loki defaults to indexing many OTLP attributes as labels, which explodes
+  # cardinality for telemetry rich in IDs (prompt.id, tool_use_id, etc.).
+  # Lock the index to a small bounded set of resource attrs; everything
+  # else (including log attributes) becomes structured metadata — still
+  # queryable via `| <attr>="..."` and `| unwrap` in LogQL.
+  otlp_config:
+    resource_attributes:
+      ignore_defaults: true
+      attributes_config:
+        - action: index_label
+          attributes:
+            - service.name
+            - service.version
+    scope_attributes:
+      - action: structured_metadata
+        regex: .*
+    log_attributes:
+      # log_attributes only supports structured_metadata or drop —
+      # indexed labels are reserved for resource_attributes.
+      - action: structured_metadata
+        regex: .*
+
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 50
+  delete_request_store: filesystem
+
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /loki/rules

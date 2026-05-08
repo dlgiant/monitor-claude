@@ -1,0 +1,107 @@
+# Async batching + bounded memory. Claude Code exports are fire-and-forget,
+# so we optimize for throughput over latency at the collector hop.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        max_recv_msg_size_mib: 16
+      http:
+        endpoint: 0.0.0.0:4318
+
+connectors:
+  # Convert Claude Code log events into derived Prometheus counters so
+  # PromQL can compute Shannon entropy / fan-out metrics. Cardinality is
+  # bounded by tool_name × decision (~40 series).
+  count:
+    logs:
+      claude_tool_decision_count:
+        description: "Count of claude_code.tool_decision events by tool_name and decision"
+        conditions:
+          - 'IsString(body) and body == "claude_code.tool_decision"'
+        attributes:
+          - key: tool_name
+            default_value: unknown
+          - key: decision
+            default_value: unknown
+
+processors:
+  # Order matters: memory_limiter MUST be first to back-pressure receivers
+  # before queues fill. batch comes after to amortize the export cost.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 384
+    spike_limit_mib: 96
+
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Claude Code exports DELTA-temporality sums; Prometheus' OTLP receiver
+  # only accepts CUMULATIVE. Convert before export.
+  deltatocumulative:
+    max_streams: 10000
+    max_stale: 5m
+
+  # Strip high-cardinality / per-identity attributes from metrics.
+  # Comment out individual keys if you DO want per-user / per-session
+  # attribution (will balloon TSDB).
+  attributes/scrub_metrics:
+    actions:
+      - key: session.id
+        action: delete
+      - key: user.id
+        action: delete
+      - key: user.email
+        action: delete
+      - key: user.account_id
+        action: delete
+      - key: user.account_uuid
+        action: delete
+      - key: organization.id
+        action: delete
+
+exporters:
+  otlphttp/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp
+    tls:
+      insecure: true
+
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Loki accepts OTLP/HTTP logs natively at /otlp/v1/logs (Loki ≥3.0).
+  # Numeric attributes (duration_ms, *_tokens, cost_usd, *_size_bytes) become
+  # structured metadata, queryable with `| unwrap` in LogQL.
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
+  # Useful while you verify the pipeline; remove once metrics flow.
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 50
+
+service:
+  telemetry:
+    logs:
+      level: warn
+  pipelines:
+    metrics:
+      receivers: [otlp, count]
+      processors: [memory_limiter, attributes/scrub_metrics, deltatocumulative, batch]
+      exporters: [otlphttp/prometheus, debug]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo, debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/loki, debug, count]
