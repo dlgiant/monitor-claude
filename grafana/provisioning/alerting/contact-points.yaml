@@ -1,0 +1,14 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: local-notify
+    receivers:
+      - uid: local-notify-webhook
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          # The grafana service has host.docker.internal mapped to host-gateway
+          # in docker-compose.yml. The notify-receiver listens on host:5678.
+          url: http://host.docker.internal:5678/grafana-webhook
+          httpMethod: POST

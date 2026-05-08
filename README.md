@@ -115,6 +115,27 @@ For per-subagent cost, use traces:
 - Loki retention 7d, filesystem backend, single-binary mode.
 - Telemetry export is async in Claude Code itself — sub-10ms overhead per op.
 
+## Real-time intervention
+
+Two complementary mechanisms — neither auto-installed; opt in by running
+the installer / starter scripts.
+
+- **Stuck-prompt hook** — `hooks/stuck-detector/` counts tool calls per user
+  prompt; warns to stderr at 20 (`CC_STUCK_WARN`) and hard-denies the next
+  tool call at 40 (`CC_STUCK_DENY`). Run `hooks/stuck-detector/install.sh`
+  to merge the hooks into your `~/.claude/settings.json`. Tune thresholds
+  via env vars (default warn=20, deny=40):
+
+  ```bash
+  export CC_STUCK_WARN=15
+  export CC_STUCK_DENY=30
+  ```
+- **Grafana alert + desktop notifier** — `grafana/provisioning/alerting/`
+  defines a Loki-based alert that fires when any prompt accumulates ≥15
+  API requests in a 5-minute window. `hooks/grafana-notify/run.sh` starts
+  a tiny webhook receiver that converts deliveries into `notify-send`
+  popups. Already provisioned; just start the receiver.
+
 ## Tearing down
 
 ```bash
