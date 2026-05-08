@@ -1,11 +1,17 @@
 {
-  "title": "Claude Code — Cost & Performance",
+  "title": "Claude Code \u2014 Cost & Performance",
   "uid": "claude-code-cost",
   "schemaVersion": 39,
   "version": 1,
   "editable": true,
-  "tags": ["claude-code", "otel"],
-  "time": { "from": "now-7d", "to": "now" },
+  "tags": [
+    "claude-code",
+    "otel"
+  ],
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
   "refresh": "30s",
   "templating": {
     "list": [
@@ -13,7 +19,10 @@
         "name": "model",
         "label": "Model",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "prom" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom"
+        },
         "query": "label_values(claude_code_token_usage_tokens_total, model)",
         "includeAll": true,
         "multi": true,
@@ -23,8 +32,107 @@
         "name": "input_price",
         "label": "$/MTok input (cache-savings calc)",
         "type": "constant",
-        "current": { "text": "15", "value": "15" },
+        "current": {
+          "text": "15",
+          "value": "15"
+        },
         "query": "15"
+      },
+      {
+        "name": "x_dim",
+        "label": "3D X axis",
+        "type": "custom",
+        "current": {
+          "text": "cost",
+          "value": "cost"
+        },
+        "options": [
+          {
+            "text": "cost",
+            "value": "cost",
+            "selected": true
+          },
+          {
+            "text": "latency_p95",
+            "value": "latency_p95",
+            "selected": false
+          },
+          {
+            "text": "output_tokens",
+            "value": "output_tokens",
+            "selected": false
+          },
+          {
+            "text": "request_count",
+            "value": "request_count",
+            "selected": false
+          }
+        ],
+        "query": "cost,latency_p95,output_tokens,request_count"
+      },
+      {
+        "name": "y_dim",
+        "label": "3D Y axis",
+        "type": "custom",
+        "current": {
+          "text": "latency_p95",
+          "value": "latency_p95"
+        },
+        "options": [
+          {
+            "text": "cost",
+            "value": "cost",
+            "selected": false
+          },
+          {
+            "text": "latency_p95",
+            "value": "latency_p95",
+            "selected": true
+          },
+          {
+            "text": "output_tokens",
+            "value": "output_tokens",
+            "selected": false
+          },
+          {
+            "text": "request_count",
+            "value": "request_count",
+            "selected": false
+          }
+        ],
+        "query": "cost,latency_p95,output_tokens,request_count"
+      },
+      {
+        "name": "z_dim",
+        "label": "3D Z axis",
+        "type": "custom",
+        "current": {
+          "text": "output_tokens",
+          "value": "output_tokens"
+        },
+        "options": [
+          {
+            "text": "cost",
+            "value": "cost",
+            "selected": false
+          },
+          {
+            "text": "latency_p95",
+            "value": "latency_p95",
+            "selected": false
+          },
+          {
+            "text": "output_tokens",
+            "value": "output_tokens",
+            "selected": true
+          },
+          {
+            "text": "request_count",
+            "value": "request_count",
+            "selected": false
+          }
+        ],
+        "query": "cost,latency_p95,output_tokens,request_count"
       }
     ]
   },
@@ -33,15 +141,30 @@
       "id": 1,
       "type": "stat",
       "title": "Total cost (window)",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area"
       },
       "fieldConfig": {
-        "defaults": { "unit": "currencyUSD", "decimals": 2 }
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2
+        }
       },
       "targets": [
         {
@@ -55,10 +178,22 @@
       "type": "stat",
       "title": "Cache hit ratio",
       "description": "cacheRead / (cacheRead + input). Higher = lower spend.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area"
       },
@@ -69,9 +204,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.4 },
-              { "color": "green", "value": 0.7 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.4
+              },
+              {
+                "color": "green",
+                "value": 0.7
+              }
             ]
           }
         }
@@ -87,15 +231,30 @@
       "type": "stat",
       "title": "Cost per accepted edit",
       "description": "USD spent per accepted Edit/Write/MultiEdit. The closest thing to ROI.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area"
       },
       "fieldConfig": {
-        "defaults": { "unit": "currencyUSD", "decimals": 3 }
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 3
+        }
       },
       "targets": [
         {
@@ -108,27 +267,65 @@
       "type": "stat",
       "title": "Sessions (window)",
       "description": "Counts session starts. Resumed sessions don't increment.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value"
       },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
       "targets": [
-        { "expr": "sum(increase(claude_code_session_count_total[$__range]))" }
+        {
+          "expr": "sum(increase(claude_code_session_count_total[$__range]))"
+        }
       ]
     },
-
     {
       "id": 9,
       "type": "stat",
       "title": "Cost per session",
       "description": "Total spend / session starts in window. ROI per task.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 4 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 4
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2
+        }
+      },
       "targets": [
         {
           "expr": "sum(increase(claude_code_cost_usage_USD_total{model=~`${model:regex}`}[$__range])) / clamp_min(sum(increase(claude_code_session_count_total[$__range])), 1)"
@@ -139,15 +336,34 @@
       "id": 10,
       "type": "stat",
       "title": "Cache savings $ (approx)",
-      "description": "Estimated USD avoided by cache reads vs paying full input price. Tune $/MTok dashboard variable to your model. Net = 0.9·cacheRead − 1.25·cacheCreation, scaled by input price.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 4 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "description": "Estimated USD avoided by cache reads vs paying full input price. Tune $/MTok dashboard variable to your model. Net = 0.9\u00b7cacheRead \u2212 1.25\u00b7cacheCreation, scaled by input price.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 4
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
           "decimals": 2,
-          "color": { "mode": "fixed", "fixedColor": "green" }
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
         }
       },
       "targets": [
@@ -161,9 +377,25 @@
       "type": "stat",
       "title": "Edit accept rate",
       "description": "% of code-edit suggestions accepted. Trust regression detector.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 4 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 4
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
@@ -171,9 +403,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.7 },
-              { "color": "green", "value": 0.9 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.7
+              },
+              {
+                "color": "green",
+                "value": 0.9
+              }
             ]
           }
         }
@@ -189,28 +430,69 @@
       "type": "stat",
       "title": "Active time",
       "description": "Total wall-clock time Claude was actively running (CLI).",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 4 },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
-      "fieldConfig": { "defaults": { "unit": "s" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
       "targets": [
-        { "expr": "sum(increase(claude_code_active_time_seconds_total[$__range]))" }
+        {
+          "expr": "sum(increase(claude_code_active_time_seconds_total[$__range]))"
+        }
       ]
     },
-
     {
       "id": 5,
       "type": "timeseries",
       "title": "Cost rate by model ($/hour)",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
-          "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2 }
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2
+          }
         }
       },
-      "options": { "legend": { "displayMode": "table", "calcs": ["sum", "mean"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "sum",
+            "mean"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "sum by (model) (rate(claude_code_cost_usage_USD_total{model=~`${model:regex}`}[5m])) * 3600",
@@ -223,8 +505,16 @@
       "type": "timeseries",
       "title": "Cost rate by effort tier ($/hour)",
       "description": "How much you spend at each thinking-effort level. xhigh is usually the biggest knob.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -232,11 +522,20 @@
             "drawStyle": "line",
             "fillOpacity": 40,
             "lineWidth": 2,
-            "stacking": { "mode": "normal" }
+            "stacking": {
+              "mode": "normal"
+            }
           }
         }
       },
-      "options": { "legend": { "displayMode": "table", "calcs": ["sum"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "sum by (effort) (rate(claude_code_cost_usage_USD_total{model=~`${model:regex}`}[5m])) * 3600",
@@ -244,24 +543,40 @@
         }
       ]
     },
-
     {
       "id": 6,
       "type": "timeseries",
       "title": "Tokens by type",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 40,
-            "stacking": { "mode": "normal" }
+            "stacking": {
+              "mode": "normal"
+            }
           }
         }
       },
-      "options": { "legend": { "displayMode": "table", "calcs": ["sum"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "sum by (type) (rate(claude_code_token_usage_tokens_total{model=~`${model:regex}`}[5m]))",
@@ -274,15 +589,35 @@
       "type": "timeseries",
       "title": "API request latency p50/p95/p99 (ms) by model",
       "description": "Latency quantiles from claude_code.api_request log events. Catches model-routing slow days.",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "ms",
-          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5 }
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
         }
       },
-      "options": { "legend": { "displayMode": "table", "calcs": ["mean", "max"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "quantile_over_time(0.50, {service_name=\"claude-code\"} | event_name = `api_request` | unwrap duration_ms [5m]) by (model)",
@@ -298,17 +633,27 @@
         }
       ]
     },
-
     {
       "id": 7,
       "type": "timeseries",
       "title": "Edit-tool decisions (accept vs reject)",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "drawStyle": "bars", "fillOpacity": 80 }
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80
+          }
         }
       },
       "targets": [
@@ -323,15 +668,34 @@
       "type": "timeseries",
       "title": "Tool result size p95 (bytes) by tool",
       "description": "How much context each tool consumes back. Find the tools eating your budget.",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "decbytes",
-          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 5 }
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
         }
       },
-      "options": { "legend": { "displayMode": "table", "calcs": ["max"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "max"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "quantile_over_time(0.95, {service_name=\"claude-code\"} | event_name = `tool_result` | unwrap tool_result_size_bytes [5m]) by (tool_name)",
@@ -339,22 +703,42 @@
         }
       ]
     },
-
     {
       "id": 16,
       "type": "heatmap",
       "title": "Activity heatmap (active seconds / 5m bucket)",
       "description": "Density of CLI active time over your week. Tall stripes = focus blocks; gaps = downtime.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
       "options": {
         "calculate": true,
-        "calculation": { "yBuckets": { "mode": "size", "value": "60" } },
-        "color": { "mode": "scheme", "scheme": "Turbo", "steps": 64 },
-        "yAxis": { "unit": "s" }
+        "calculation": {
+          "yBuckets": {
+            "mode": "size",
+            "value": "60"
+          }
+        },
+        "color": {
+          "mode": "scheme",
+          "scheme": "Turbo",
+          "steps": 64
+        },
+        "yAxis": {
+          "unit": "s"
+        }
       },
       "targets": [
-        { "expr": "sum(rate(claude_code_active_time_seconds_total[5m])) * 300" }
+        {
+          "expr": "sum(rate(claude_code_active_time_seconds_total[5m])) * 300"
+        }
       ]
     },
     {
@@ -362,17 +746,29 @@
       "type": "barchart",
       "title": "Edits accepted by language (window)",
       "description": "Where Claude is actually working in your repos.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "fillOpacity": 80 }
+          "custom": {
+            "fillOpacity": 80
+          }
         }
       },
       "options": {
         "orientation": "horizontal",
-        "legend": { "showLegend": false },
+        "legend": {
+          "showLegend": false
+        },
         "xField": "language"
       },
       "targets": [
@@ -387,25 +783,50 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true }
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            }
           }
         }
       ]
     },
-
     {
       "id": 18,
       "type": "piechart",
       "title": "Auxiliary vs main spend",
       "description": "Auxiliary = subagents and background tasks; main = your direct prompts. Big auxiliary share = subagent-heavy workflow.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
       "options": {
         "pieType": "donut",
-        "displayLabels": ["name", "percent"],
-        "legend": { "displayMode": "table", "values": ["value", "percent"] }
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "values": [
+            "value",
+            "percent"
+          ]
+        }
       },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD"
+        }
+      },
       "targets": [
         {
           "expr": "sum by (query_source) (increase(claude_code_cost_usage_USD_total{model=~`${model:regex}`}[$__range]))",
@@ -417,12 +838,25 @@
       "id": 19,
       "type": "table",
       "title": "Auxiliary cost (subagent proxy)",
-      "description": "Top auxiliary spend by model + effort. True per-subagent attribution requires Tempo traces — open Explore → Tempo and run TraceQL once Claude Code emits spans.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
-      "options": { "showHeader": true },
+      "description": "Top auxiliary spend by model + effort. True per-subagent attribution requires Tempo traces \u2014 open Explore \u2192 Tempo and run TraceQL once Claude Code emits spans.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "options": {
+        "showHeader": true
+      },
       "fieldConfig": {
-        "defaults": { "unit": "currencyUSD", "decimals": 3 }
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 3
+        }
       },
       "targets": [
         {
@@ -435,26 +869,51 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true }
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            }
           }
         }
       ]
     },
-
     {
       "id": 20,
       "type": "timeseries",
       "title": "Cognitive throughput (output tokens / sec) by effort tier",
       "description": "Output tokens generated per second of API request time, grouped by thinking-effort tier. Drops when the agent is wrestling a hard problem; rises in flow. The drop-with-effort-rise pattern is the closest telemetry signature of 'the brain working harder'.",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10 }
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
         }
       },
-      "options": { "legend": { "displayMode": "table", "calcs": ["mean", "max", "min"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "mean",
+            "max",
+            "min"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "1000 * (sum by (effort) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap output_tokens [5m])) / sum by (effort) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap duration_ms [5m])))",
@@ -467,8 +926,16 @@
       "type": "timeseries",
       "title": "Tool-decision Shannon entropy (bits)",
       "description": "Diversity of tool usage in a 5m window. 0 = stuck on one tool (loop / dead end). log2(N) = uniform across N distinct tools (broad exploration). Sudden collapses are the signature of a thought-loop.",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -477,19 +944,34 @@
             "drawStyle": "line",
             "lineWidth": 2,
             "fillOpacity": 20,
-            "thresholdsStyle": { "mode": "line+area" }
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
           },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.5 },
-              { "color": "green", "value": 1.5 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 1.5
+              }
             ]
           }
         }
       },
-      "options": { "legend": { "displayMode": "list" } },
+      "options": {
+        "legend": {
+          "displayMode": "list"
+        }
+      },
       "targets": [
         {
           "expr": "- sum( (rate(claude_tool_decision_count_total[5m]) / on() group_left() sum(rate(claude_tool_decision_count_total[5m]))) * ln(rate(claude_tool_decision_count_total[5m]) / on() group_left() sum(rate(claude_tool_decision_count_total[5m]))) ) / 0.6931471805599453",
@@ -501,15 +983,29 @@
         }
       ]
     },
-
     {
       "id": 8,
       "type": "table",
       "title": "Cost breakdown (window)",
-      "datasource": { "type": "prometheus", "uid": "prom" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 56 },
-      "options": { "showHeader": true },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 3 } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 3
+        }
+      },
       "targets": [
         {
           "expr": "sort_desc(sum by (model, effort, query_source) (increase(claude_code_cost_usage_USD_total[$__range])))",
@@ -521,10 +1017,395 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true }
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "instance": true
+            }
           }
         }
       ]
+    },
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Per-query_source breakdown (background agents vs main thread)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Cost rate by query_source ($/hour)",
+      "description": "Burn rate for each internal Claude agent: repl_main_thread (your prompts), generate_session_title, away_summary, prompt_suggestion. Background agents should stay tiny vs. main.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 65
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "sum",
+            "mean"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (query_source) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap cost_usd [5m])) * 12",
+          "legendFormat": "{{query_source}}"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "API request rate by query_source (req/min)",
+      "description": "Frequency of each internal agent. Sudden spikes in non-repl_main_thread sources can indicate retry loops.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 65
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "sum",
+            "mean"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (query_source) (rate({service_name=\"claude-code\"} | event_name = `api_request` [5m])) * 60",
+          "legendFormat": "{{query_source}}"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Latency p95 (ms) by query_source",
+      "description": "Per-agent response time. Background agents should be much faster; main thread should be slowest.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 73
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "quantile_over_time(0.95, {service_name=\"claude-code\"} | event_name = `api_request` | unwrap duration_ms [5m]) by (query_source)",
+          "legendFormat": "p95 {{query_source}}"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "table",
+      "title": "Per-query_source totals (window)",
+      "description": "Aggregated metrics per internal agent over the dashboard time range.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 73
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Value #cost",
+            "Value #req",
+            "Value #out_tok"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 3
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #cost"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "displayName",
+                "value": "cost ($)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #req"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "displayName",
+                "value": "requests"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #out_tok"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "displayName",
+                "value": "output tokens"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #lat95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "displayName",
+                "value": "p95 latency"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "cost",
+          "expr": "sum by (query_source) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap cost_usd [$__range]))",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "req",
+          "expr": "sum by (query_source) (count_over_time({service_name=\"claude-code\"} | event_name = `api_request` [$__range]))",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "out_tok",
+          "expr": "sum by (query_source) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap output_tokens [$__range]))",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "refId": "lat95",
+          "expr": "quantile_over_time(0.95, {service_name=\"claude-code\"} | event_name = `api_request` | unwrap duration_ms [$__range]) by (query_source)",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "query_source": 0,
+              "Value #cost": 1,
+              "Value #req": 2,
+              "Value #out_tok": 3,
+              "Value #lat95": 4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Agent topology (3D \u2014 pick X / Y / Z dimensions in the variables above)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "ae3e-plotly-panel",
+      "title": "3D agent graph \u2014 query_sources as nodes, edges to models",
+      "description": "Each query_source is a sphere positioned in 3D by the chosen X/Y/Z metrics (sphere size = request count). Models are smaller cubes; edges connect query_source \u2192 models they used. Pick the 3 dimensions in the dashboard variables (top of page).",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 24,
+        "x": 0,
+        "y": 82
+      },
+      "targets": [
+        {
+          "refId": "cost",
+          "expr": "sum by (query_source) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap cost_usd [$__range]))",
+          "format": "table",
+          "instant": true,
+          "queryType": "instant"
+        },
+        {
+          "refId": "lat",
+          "expr": "quantile_over_time(0.95, {service_name=\"claude-code\"} | event_name = `api_request` | unwrap duration_ms [$__range]) by (query_source)",
+          "format": "table",
+          "instant": true,
+          "queryType": "instant"
+        },
+        {
+          "refId": "tok",
+          "expr": "sum by (query_source) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap output_tokens [$__range]))",
+          "format": "table",
+          "instant": true,
+          "queryType": "instant"
+        },
+        {
+          "refId": "req",
+          "expr": "sum by (query_source) (count_over_time({service_name=\"claude-code\"} | event_name = `api_request` [$__range]))",
+          "format": "table",
+          "instant": true,
+          "queryType": "instant"
+        },
+        {
+          "refId": "edges",
+          "expr": "sum by (query_source, model) (count_over_time({service_name=\"claude-code\"} | event_name = `api_request` [$__range]))",
+          "format": "table",
+          "instant": true,
+          "queryType": "instant"
+        }
+      ],
+      "options": {
+        "configuration": {
+          "type": "object",
+          "value": {}
+        },
+        "layout": {
+          "type": "object",
+          "value": {}
+        },
+        "data": {
+          "type": "object",
+          "value": []
+        },
+        "script": "// 3D agent topology graph \u2014 modernized.\n// Inputs: refId 'cost','lat','tok','req' (per query_source) and 'edges' (per (query_source, model)).\n// Reads dashboard variables x_dim, y_dim, z_dim from the second arg.\n\nfunction getVar(name, fallback) {\n  if (!variables) return fallback;\n  if (Array.isArray(variables)) {\n    const v = variables.find(v => v && v.name === name);\n    if (v && v.current) return v.current.value || v.current.text || fallback;\n    return fallback;\n  }\n  if (typeof variables === 'object') {\n    const v = variables[name];\n    if (v == null) return fallback;\n    if (typeof v === 'string') return v;\n    if (v.current) return v.current.value || v.current.text || fallback;\n    if (v.value) return v.value;\n  }\n  return fallback;\n}\n\nconst frames = (data && (data.series || data.data || (Array.isArray(data) ? data : []))) || [];\nconst byRef = {};\nframes.forEach(s => { if (s && s.refId) byRef[s.refId] = s; });\n\nfunction asArr(v) { return v && v.toArray ? v.toArray() : v; }\n\nfunction tableMap(s) {\n  if (!s) return {};\n  const fields = s.fields || [];\n  const labelField = fields.find(f => f.name === 'query_source')\n                     || fields.find(f => f.type === 'string')\n                     || fields[0];\n  const valField = fields.find(f => f.type === 'number')\n                   || fields.find(f => f.name && f.name.indexOf('Value') === 0);\n  if (!labelField || !valField) return {};\n  const labels = asArr(labelField.values);\n  const vals = asArr(valField.values);\n  if (!labels || !vals) return {};\n  const out = {};\n  for (let i = 0; i < labels.length; i++) {\n    if (labels[i] != null) out[labels[i]] = +vals[i];\n  }\n  return out;\n}\n\nfunction edgeRows(s) {\n  if (!s) return [];\n  const fields = s.fields || [];\n  const qs = fields.find(f => f.name === 'query_source');\n  const md = fields.find(f => f.name === 'model');\n  const vf = fields.find(f => f.type === 'number');\n  if (!qs || !md || !vf) return [];\n  const qsv = asArr(qs.values), mdv = asArr(md.values), vfv = asArr(vf.values);\n  const rows = [];\n  for (let i = 0; i < qsv.length; i++) rows.push({ qs: qsv[i], model: mdv[i], n: +vfv[i] });\n  return rows;\n}\n\nconst metrics = {\n  cost:          tableMap(byRef.cost),\n  latency_p95:   tableMap(byRef.lat),\n  output_tokens: tableMap(byRef.tok),\n  request_count: tableMap(byRef.req)\n};\nconst edges = edgeRows(byRef.edges);\nconst sources = Object.keys(metrics.cost || {});\n\nconst xKey = getVar('x_dim', 'cost');\nconst yKey = getVar('y_dim', 'latency_p95');\nconst zKey = getVar('z_dim', 'output_tokens');\n\nconst dimLabel = {\n  cost: 'Cost ($)',\n  latency_p95: 'Latency p95 (ms)',\n  output_tokens: 'Output tokens',\n  request_count: 'API requests'\n};\nconst dimFormat = {\n  cost: v => '$' + (+v).toFixed(4),\n  latency_p95: v => Math.round(+v).toLocaleString() + ' ms',\n  output_tokens: v => Math.round(+v).toLocaleString(),\n  request_count: v => Math.round(+v).toLocaleString()\n};\n\nconst mx = metrics[xKey] || {}, my = metrics[yKey] || {}, mz = metrics[zKey] || {};\nconst getX = s => mx[s] != null ? mx[s] : 0;\nconst getY = s => my[s] != null ? my[s] : 0;\nconst getZ = s => mz[s] != null ? mz[s] : 0;\n\n// Modern dark-theme palette \u2014 cool\u2192warm distinct hues for query_sources.\nconst palette = ['#7AA2F7', '#BB9AF7', '#F7768E', '#E0AF68', '#9ECE6A', '#7DCFFF'];\nconst sourceColors = sources.map((_, i) => palette[i % palette.length]);\n\n// Build per-node customdata so hover can show all four metrics regardless of axis pick.\nconst sourceCustom = sources.map(s => [\n  metrics.cost[s] || 0,\n  metrics.latency_p95[s] || 0,\n  metrics.output_tokens[s] || 0,\n  metrics.request_count[s] || 0\n]);\n\nconst sourceNodes = {\n  type: 'scatter3d', mode: 'markers+text', name: 'query_source',\n  x: sources.map(getX), y: sources.map(getY), z: sources.map(getZ),\n  text: sources, textposition: 'top center',\n  textfont: { color: '#e0e6ed', size: 12, family: 'Inter, system-ui, sans-serif' },\n  customdata: sourceCustom,\n  hovertemplate:\n    '<b style=\"font-size:14px\">%{text}</b><br>' +\n    '<span style=\"color:#a0a8b4\">Cost</span> $%{customdata[0]:.4f}<br>' +\n    '<span style=\"color:#a0a8b4\">p95 latency</span> %{customdata[1]:,.0f} ms<br>' +\n    '<span style=\"color:#a0a8b4\">Output tokens</span> %{customdata[2]:,}<br>' +\n    '<span style=\"color:#a0a8b4\">Requests</span> %{customdata[3]:,}' +\n    '<extra></extra>',\n  marker: {\n    size: sources.map(s => 14 + Math.sqrt(metrics.request_count[s] || 1) * 5),\n    sizemode: 'diameter',\n    color: sourceColors,\n    opacity: 0.92,\n    line: { color: 'rgba(255,255,255,0.7)', width: 1.5 }\n  }\n};\n\n// Models: positioned at request-weighted centroid of their connecting query_sources, lifted on Z.\nconst models = Array.from(new Set(edges.map(e => e.model)));\nconst modelPos = {};\nconst zRange = sources.map(getZ);\nconst zMax = zRange.length ? Math.max(...zRange) : 1;\nconst zSpan = zMax - (zRange.length ? Math.min(...zRange) : 0) || 1;\nmodels.forEach(m => {\n  const conn = edges.filter(e => e.model === m);\n  const tot = conn.reduce((a, e) => a + e.n, 0) || 1;\n  modelPos[m] = {\n    x: conn.reduce((a, e) => a + getX(e.qs) * e.n, 0) / tot,\n    y: conn.reduce((a, e) => a + getY(e.qs) * e.n, 0) / tot,\n    z: conn.reduce((a, e) => a + getZ(e.qs) * e.n, 0) / tot + zSpan * 0.25\n  };\n});\n\nconst modelNodes = {\n  type: 'scatter3d', mode: 'markers+text', name: 'model',\n  x: models.map(m => modelPos[m].x),\n  y: models.map(m => modelPos[m].y),\n  z: models.map(m => modelPos[m].z),\n  text: models, textposition: 'bottom center',\n  textfont: { color: '#ffd28a', size: 11, family: 'Inter, system-ui, sans-serif' },\n  hovertemplate: '<b>%{text}</b><br><span style=\"color:#a0a8b4\">model</span><extra></extra>',\n  marker: {\n    size: 18,\n    symbol: 'diamond',\n    color: '#ffb454',\n    opacity: 0.95,\n    line: { color: 'rgba(255,255,255,0.8)', width: 2 }\n  }\n};\n\n// Edge traces: thicker, semi-transparent, with NaN separators between segments.\nconst ex = [], ey = [], ez = [], ehover = [];\nedges.forEach(e => {\n  ex.push(getX(e.qs), modelPos[e.model].x, null);\n  ey.push(getY(e.qs), modelPos[e.model].y, null);\n  ez.push(getZ(e.qs), modelPos[e.model].z, null);\n});\n\nconst edgeTrace = {\n  type: 'scatter3d', mode: 'lines', name: 'calls',\n  x: ex, y: ey, z: ez,\n  line: { color: 'rgba(180,200,230,0.35)', width: 4 },\n  hoverinfo: 'skip'\n};\n\nconst axisStyle = {\n  gridcolor: 'rgba(255,255,255,0.06)',\n  zerolinecolor: 'rgba(255,255,255,0.15)',\n  backgroundcolor: 'rgba(20,26,38,0.4)',\n  showbackground: true,\n  tickfont: { color: '#9aa5b1', size: 10, family: 'Inter, system-ui, sans-serif' }\n};\n\nconst layout = {\n  autosize: true,\n  showlegend: true,\n  legend: {\n    x: 0.01, y: 0.99,\n    bgcolor: 'rgba(15,20,30,0.55)',\n    bordercolor: 'rgba(255,255,255,0.08)',\n    borderwidth: 1,\n    font: { color: '#e0e6ed', size: 11, family: 'Inter, system-ui, sans-serif' }\n  },\n  margin: { l: 0, r: 0, t: 8, b: 0 },\n  paper_bgcolor: 'rgba(0,0,0,0)',\n  plot_bgcolor: 'rgba(0,0,0,0)',\n  font: { color: '#e0e6ed', family: 'Inter, system-ui, sans-serif' },\n  hoverlabel: {\n    bgcolor: 'rgba(15,20,30,0.92)',\n    bordercolor: 'rgba(122,162,247,0.6)',\n    font: { color: '#e0e6ed', size: 12, family: 'Inter, system-ui, sans-serif' }\n  },\n  scene: {\n    aspectmode: 'cube',\n    bgcolor: 'rgba(11,15,25,0.45)',\n    xaxis: Object.assign({ title: { text: dimLabel[xKey] || xKey, font: { size: 13, color: '#cdd6e0' } } }, axisStyle),\n    yaxis: Object.assign({ title: { text: dimLabel[yKey] || yKey, font: { size: 13, color: '#cdd6e0' } } }, axisStyle),\n    zaxis: Object.assign({ title: { text: dimLabel[zKey] || zKey, font: { size: 13, color: '#cdd6e0' } } }, axisStyle),\n    camera: { eye: { x: 1.7, y: 1.7, z: 1.25 }, up: { x: 0, y: 0, z: 1 } }\n  }\n};\n\nconst config = { displayModeBar: false, responsive: true };\n\nreturn { data: [edgeTrace, sourceNodes, modelNodes], layout, config };\n"
+      }
     }
   ]
 }
