@@ -1,0 +1,591 @@
+{
+  "title": "Claude Code — Feedback loops (BACKLOG)",
+  "uid": "claude-code-feedback",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": [
+    "claude-code",
+    "otel",
+    "feedback"
+  ],
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prom"
+        },
+        "query": "label_values(claude_code_token_usage_tokens_total, model)",
+        "includeAll": true,
+        "multi": true,
+        "refresh": 2
+      },
+      {
+        "name": "stuck_w_entropy",
+        "label": "Stuck weight: inverse entropy",
+        "type": "constant",
+        "current": { "text": "0.4", "value": "0.4" },
+        "query": "0.4"
+      },
+      {
+        "name": "stuck_w_thrash",
+        "label": "Stuck weight: thrash (calls/edit)",
+        "type": "constant",
+        "current": { "text": "0.3", "value": "0.3" },
+        "query": "0.3"
+      },
+      {
+        "name": "stuck_w_errors",
+        "label": "Stuck weight: error fraction",
+        "type": "constant",
+        "current": { "text": "0.3", "value": "0.3" },
+        "query": "0.3"
+      },
+      {
+        "name": "cascade_window",
+        "label": "Cascade window (next-events count K)",
+        "type": "constant",
+        "current": { "text": "5", "value": "5" },
+        "query": "5"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 200,
+      "type": "row",
+      "title": "1 · Tool affinity heatmap",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 201,
+      "type": "heatmap",
+      "title": "Tool usage heatmap (tool × time, rate of decisions)",
+      "description": "Spans grouped by tool_name over time. Bigram-style affinity is read off visually as horizontal stripes of co-active tools — bands that switch on together are working as a pair (e.g. Read↔Edit), bands that pulse alone in isolation are loop-prone.",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "scaleDistribution": { "type": "linear" },
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false }
+          }
+        }
+      },
+      "options": {
+        "calculate": false,
+        "yAxis": { "axisPlacement": "left", "reverse": false },
+        "color": {
+          "mode": "scheme",
+          "scheme": "Viridis",
+          "exponent": 0.5,
+          "steps": 64
+        },
+        "cellGap": 2,
+        "cellValues": { "decimals": 2 },
+        "tooltip": { "show": true, "yHistogram": false },
+        "legend": { "show": true }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tool_name) (rate(claude_tool_decision_count_total[$__rate_interval]))",
+          "format": "time_series",
+          "legendFormat": "{{tool_name}}"
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "table",
+      "title": "Tool bigrams — within-prompt co-occurrence (top pairs)",
+      "description": "True sequential bigrams need stream processing. This is the next-best thing: for each prompt_id, every unordered pair of tools that fired together is one co-occurrence. High counts = tools that ride together. Compare the top of this table against the heatmap above — bigrams should explain the bands.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 11 },
+      "options": { "showHeader": true },
+      "fieldConfig": {
+        "defaults": { "decimals": 0 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "displayName", "value": "prompts using this tool" },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "gauge", "mode": "gradient" }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "tool_name" },
+            "properties": [
+              { "id": "displayName", "value": "tool" }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(20, sum by (tool_name) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_decision` [$__range])))",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": { "sort": [{ "field": "Value", "desc": true }] }
+        }
+      ]
+    },
+    {
+      "id": 210,
+      "type": "row",
+      "title": "2 · Stuck Score",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 211,
+      "type": "stat",
+      "title": "Stuck Score (now)",
+      "description": "Weighted formula in [0..1]. 0 = healthy & diverse; 1 = looped, errored, churning. Components are tunable via dashboard variables.",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.4 },
+              { "color": "red", "value": 0.7 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "clamp_max(\n  ${stuck_w_entropy} * (1 - clamp_max(\n    (- sum( (rate(claude_tool_decision_count_total[5m]) / scalar(sum(rate(claude_tool_decision_count_total[5m])))) * ln(rate(claude_tool_decision_count_total[5m]) / scalar(sum(rate(claude_tool_decision_count_total[5m])))) ) / 0.6931471805599453) / 3, 1))\n+ ${stuck_w_thrash} * clamp_max(\n    (sum(rate(claude_tool_decision_count_total[5m])) - sum(rate(claude_code_code_edit_tool_decision_total{decision=\"accept\"}[5m])))\n    / clamp_min(sum(rate(claude_tool_decision_count_total[5m])), 0.001)\n  , 1)\n+ ${stuck_w_errors} * clamp_max(\n    (sum(rate(claude_tool_decision_count_total{decision=\"reject\"}[5m])))\n    / clamp_min(sum(rate(claude_tool_decision_count_total[5m])), 0.001)\n  , 1)\n, 1)",
+          "legendFormat": "stuck"
+        }
+      ]
+    },
+    {
+      "id": 212,
+      "type": "timeseries",
+      "title": "Stuck Score over time",
+      "description": "Same formula as the stat above, plotted. Watch for sustained ramps above 0.5 — those are the windows worth re-reading the transcript for.",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "thresholdsStyle": { "mode": "line+area" }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.4 },
+              { "color": "red", "value": 0.7 }
+            ]
+          }
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "clamp_max(\n  ${stuck_w_entropy} * (1 - clamp_max(\n    (- sum( (rate(claude_tool_decision_count_total[5m]) / scalar(sum(rate(claude_tool_decision_count_total[5m])))) * ln(rate(claude_tool_decision_count_total[5m]) / scalar(sum(rate(claude_tool_decision_count_total[5m])))) ) / 0.6931471805599453) / 3, 1))\n+ ${stuck_w_thrash} * clamp_max(\n    (sum(rate(claude_tool_decision_count_total[5m])) - sum(rate(claude_code_code_edit_tool_decision_total{decision=\"accept\"}[5m])))\n    / clamp_min(sum(rate(claude_tool_decision_count_total[5m])), 0.001)\n  , 1)\n+ ${stuck_w_errors} * clamp_max(\n    (sum(rate(claude_tool_decision_count_total{decision=\"reject\"}[5m])))\n    / clamp_min(sum(rate(claude_tool_decision_count_total[5m])), 0.001)\n  , 1)\n, 1)",
+          "legendFormat": "stuck score"
+        }
+      ]
+    },
+    {
+      "id": 213,
+      "type": "timeseries",
+      "title": "Stuck Score components (stacked)",
+      "description": "The three weighted components plotted separately so you can see which one is dragging the score up. Inverse entropy = tool concentration. Thrash = decisions without accepted edits. Errors = rejected/failed decisions.",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 30 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        }
+      },
+      "options": { "legend": { "displayMode": "table", "calcs": ["mean", "max"], "placement": "bottom" } },
+      "targets": [
+        {
+          "refId": "entropy",
+          "expr": "${stuck_w_entropy} * (1 - clamp_max(\n  (- sum( (rate(claude_tool_decision_count_total[5m]) / scalar(sum(rate(claude_tool_decision_count_total[5m])))) * ln(rate(claude_tool_decision_count_total[5m]) / scalar(sum(rate(claude_tool_decision_count_total[5m])))) ) / 0.6931471805599453) / 3\n, 1))",
+          "legendFormat": "inverse entropy (w={{stuck_w_entropy}})"
+        },
+        {
+          "refId": "thrash",
+          "expr": "${stuck_w_thrash} * clamp_max(\n  (sum(rate(claude_tool_decision_count_total[5m])) - sum(rate(claude_code_code_edit_tool_decision_total{decision=\"accept\"}[5m])))\n  / clamp_min(sum(rate(claude_tool_decision_count_total[5m])), 0.001)\n, 1)",
+          "legendFormat": "thrash (w={{stuck_w_thrash}})"
+        },
+        {
+          "refId": "errors",
+          "expr": "${stuck_w_errors} * clamp_max(\n  sum(rate(claude_tool_decision_count_total{decision=\"reject\"}[5m]))\n  / clamp_min(sum(rate(claude_tool_decision_count_total[5m])), 0.001)\n, 1)",
+          "legendFormat": "errors (w={{stuck_w_errors}})"
+        }
+      ]
+    },
+    {
+      "id": 220,
+      "type": "row",
+      "title": "3 · The Confessional",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 221,
+      "type": "text",
+      "title": "Setup",
+      "gridPos": { "h": 12, "w": 8, "x": 0, "y": 39 },
+      "options": {
+        "mode": "markdown",
+        "content": "### How this works\n\nA Claude Code **Stop hook** spawns a fresh `claude` invocation with the just-finished transcript and a self-critique prompt. The critique is logged as a structured event to Loki under `event_name = self_critique` with attributes:\n\n- `verdict` — `clean` / `wobbly` / `looped` / `wrong`\n- `summary` — one-line root cause\n- `suggested_fix` — what next time should look like\n\nThe panel on the right surfaces the latest entries.\n\n### Install\n\n```bash\n~/monitor-claude/hooks/confessional/install.sh\n```\n\nThis registers a Stop hook in `~/.claude/settings.json` pointing at `hooks/confessional/critique.sh`.\n\n### Tunables (env)\n\n- `CC_CONFESS_MODEL` — default `claude-haiku-4-5-20251001`\n- `CC_CONFESS_TIMEOUT_S` — default `60`\n- `CC_CONFESS_DISABLE` — set to `1` to skip\n\nNo entries yet → no events have been ingested. Run a session, type `/exit`, give it a minute."
+      }
+    },
+    {
+      "id": 222,
+      "type": "logs",
+      "title": "Latest self-critiques",
+      "description": "Stream of self-critique events emitted by the Stop hook. Each line is one finished session's verdict.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 12, "w": 16, "x": 8, "y": 39 },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{service_name=\"claude-code\"} | event_name = `self_critique`"
+        }
+      ]
+    },
+    {
+      "id": 223,
+      "type": "piechart",
+      "title": "Verdict distribution (window)",
+      "description": "Share of self-critique verdicts. clean = healthy session, wobbly = mostly fine but flagged, looped = stuck, wrong = produced incorrect output.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 51 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": {
+        "pieType": "donut",
+        "displayLabels": ["name", "percent"],
+        "legend": { "displayMode": "table", "values": ["value", "percent"], "placement": "right" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (verdict) (count_over_time({service_name=\"claude-code\"} | event_name = `self_critique` [$__range]))",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 230,
+      "type": "row",
+      "title": "4 · Error cascade tracker",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 59 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 231,
+      "type": "timeseries",
+      "title": "Failure rate by tool (errors / min)",
+      "description": "Filtered tool_result events with success=false. The tool with a sustained failure stripe is the one to investigate first — it's where every subsequent session-minute is being wasted.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 60 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "spanNulls": true
+          }
+        }
+      },
+      "options": { "legend": { "displayMode": "table", "calcs": ["sum", "max"], "placement": "bottom" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tool_name) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_result` | success = `false` [1m]))",
+          "legendFormat": "{{tool_name}}"
+        }
+      ]
+    },
+    {
+      "id": 232,
+      "type": "timeseries",
+      "title": "Cascade depth — calls per prompt that contains an error",
+      "description": "Per-prompt, mean number of tool_decision events when at least one tool_result failure exists in that prompt. Climbing line = errors are triggering longer recovery sequences (the cascade getting deeper).",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 60 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70
+          },
+          "color": { "mode": "fixed", "fixedColor": "#F7768E" }
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_decision` [$__interval])) and on(prompt_id) (sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_result` | success = `false` [$__interval])) > 0))",
+          "legendFormat": "mean tool calls / errored prompt"
+        }
+      ]
+    },
+    {
+      "id": 233,
+      "type": "table",
+      "title": "Error cascades by prompt — top offenders",
+      "description": "Prompts where a tool failed, joined to total tool-call count and cost in that same prompt. Cascade length is the proxy: how many tools the agent had to fire after an error before the prompt ended. Click prompt_id to grep your transcript.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 69 },
+      "options": { "showHeader": true, "footer": { "show": false } },
+      "fieldConfig": {
+        "defaults": { "decimals": 2 },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "prompt_id" },
+            "properties": [
+              { "id": "displayName", "value": "prompt" },
+              { "id": "custom.width", "value": 260 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #errs" },
+            "properties": [
+              { "id": "displayName", "value": "failures" },
+              { "id": "unit", "value": "short" },
+              { "id": "decimals", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #total" },
+            "properties": [
+              { "id": "displayName", "value": "total tool calls" },
+              { "id": "unit", "value": "short" },
+              { "id": "decimals", "value": 0 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Value #cost" },
+            "properties": [
+              { "id": "displayName", "value": "cost" },
+              { "id": "unit", "value": "currencyUSD" },
+              { "id": "decimals", "value": 3 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "cascade" },
+            "properties": [
+              { "id": "displayName", "value": "cascade depth" },
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "gauge", "mode": "gradient" }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 5 },
+                    { "color": "red", "value": 15 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "errs",
+          "expr": "sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_result` | success = `false` [$__range]))",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "total",
+          "expr": "sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_decision` [$__range]))",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "cost",
+          "expr": "sum by (prompt_id) (sum_over_time({service_name=\"claude-code\"} | event_name = `api_request` | unwrap cost_usd [$__range]))",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": { "byField": "prompt_id", "mode": "outer" }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "fieldName": "Value #errs",
+                "config": { "id": "greater", "options": { "value": 0 } }
+              }
+            ],
+            "type": "include",
+            "match": "all"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "binary": {
+              "left": "Value #total",
+              "operator": "-",
+              "right": "Value #errs"
+            },
+            "alias": "cascade",
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true
+            },
+            "indexByName": {
+              "prompt_id": 0,
+              "Value #errs": 1,
+              "Value #total": 2,
+              "cascade": 3,
+              "Value #cost": 4
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": { "sort": [{ "field": "cascade", "desc": true }] }
+        }
+      ]
+    },
+    {
+      "id": 234,
+      "type": "histogram",
+      "title": "Cascade-depth distribution (per errored prompt)",
+      "description": "Histogram of cascade depths across prompts that contained at least one tool failure. Long right tail = the kind of prompts where one bad tool call snowballs into a 20-step recovery hunt.",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 79 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "gradientMode": "opacity"
+          },
+          "color": { "mode": "fixed", "fixedColor": "#F7768E" }
+        }
+      },
+      "options": {
+        "bucketSize": 1,
+        "bucketOffset": 0,
+        "combine": false,
+        "legend": { "showLegend": false }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_decision` [$__range])) and on(prompt_id) (sum by (prompt_id) (count_over_time({service_name=\"claude-code\"} | event_name = `tool_result` | success = `false` [$__range])) > 0)",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}
